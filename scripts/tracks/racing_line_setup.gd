@@ -22,5 +22,3 @@ func _setup_curve() -> void:
 
 	for point in racing_points:
 		curve.add_point(point)
-
-	print("RacingLine: %d Punkte, Länge: %.1f" % [curve.point_count, curve.get_baked_length()])

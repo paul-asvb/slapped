@@ -1,21 +1,16 @@
 extends Camera3D
 class_name DynamicCamera
 ## Kamera hält ALLE Fahrzeuge im Bild und folgt dem Streckenverlauf (Wrecked-Style)
-## Smooth Rotation um Kurven
 
-@export var default_height: float = 45.0
-@export var min_height: float = 35.0
-@export var max_height: float = 100.0
-@export var position_smooth_speed: float = 4.0
-@export var rotation_smooth_speed: float = 2.5  # Langsamer für smoothere Kurven
-@export var height_smooth_speed: float = 3.0
-@export var look_ahead: float = 10.0
-@export var camera_angle: float = 55.0
-@export var screen_margin: float = 30.0
+# Nicht-konfigurierbare Werte
+var rotation_smooth_speed: float = 2.5
+var look_ahead: float = 10.0
+var camera_angle: float = 55.0
+var screen_margin: float = 50.0
 
 var race_tracker: RaceTracker
-var _target_height: float = 80.0
-var _current_height: float = 80.0
+var _target_height: float = 25.0
+var _current_height: float = 25.0
 var _target_position: Vector3
 var _current_position: Vector3
 var _target_direction: Vector3 = Vector3(-1, 0, 0)  # Ziel-Blickrichtung
@@ -23,8 +18,9 @@ var _current_direction: Vector3 = Vector3(-1, 0, 0)  # Aktuelle Blickrichtung (s
 var _initialized: bool = false
 
 func _ready() -> void:
-	_target_height = default_height
-	_current_height = default_height
+	var cfg = GameManager.config
+	_target_height = cfg.camera_default_height
+	_current_height = cfg.camera_default_height
 
 func setup(tracker: RaceTracker) -> void:
 	race_tracker = tracker
@@ -32,41 +28,29 @@ func setup(tracker: RaceTracker) -> void:
 
 func _initialize_from_vehicles() -> void:
 	if not race_tracker:
-		print("DynamicCamera: No race_tracker!")
 		return
 
 	var vehicles = race_tracker.get_vehicles()
 	if vehicles.is_empty():
-		print("DynamicCamera: No vehicles!")
 		return
 
 	# Berechne Mittelpunkt und Bounding Box aller Fahrzeuge
 	var bounds = _calculate_vehicle_bounds(vehicles)
 	var center = bounds["center"]
-	var size = bounds["size"]
-
-	print("DynamicCamera: Center=", center, " Size=", size)
 
 	# Initiale Richtung: nach -X (links), da die Autos so starten
 	_target_direction = Vector3(-1, 0, 0)
 	_current_direction = Vector3(-1, 0, 0)
 
-	# Berechne nötige Höhe um alle Autos zu sehen
-	var fov_rad = deg_to_rad(fov)
-	var needed_height = max(size.x, size.z) / tan(fov_rad / 2.0) * 0.6
-	needed_height = clamp(needed_height, min_height, max_height)
-
+	# Starte immer mit default_height aus Config
+	var cfg = GameManager.config
 	_target_position = center
 	_current_position = center
-	_target_height = needed_height
-	_current_height = needed_height
-
-	print("DynamicCamera: Height=", needed_height, " Position=", center)
+	_target_height = cfg.camera_default_height
+	_current_height = cfg.camera_default_height
 
 	# Positioniere Kamera sofort
 	_update_camera_transform_immediate()
-
-	print("DynamicCamera: Final camera pos=", global_position)
 	_initialized = true
 
 func _calculate_vehicle_bounds(vehicles: Array[Vehicle]) -> Dictionary:
@@ -118,18 +102,25 @@ func _process(delta: float) -> void:
 	if leader:
 		_target_direction = _get_track_direction_at(leader)
 
-	# Fokuspunkt: Mitte aller Fahrzeuge + leichte Vorausschau in Fahrtrichtung
-	_target_position = center + _current_direction * look_ahead
+	# Fokuspunkt: Mitte aller Fahrzeuge
+	# Look-ahead reduzieren wenn Spieler weit auseinander sind
+	var spread = max(size.x, size.z)
+	var dynamic_look_ahead = look_ahead * clamp(1.0 - spread / 100.0, 0.0, 1.0)
+	_target_position = center + _current_direction * dynamic_look_ahead
 
-	# Berechne nötige Höhe
-	var fov_rad = deg_to_rad(fov)
-	var needed_height = max(size.x, size.z) / tan(fov_rad / 2.0) * 1.2
-	needed_height = clamp(needed_height, min_height, max_height)
+	# Berechne nötige Höhe basierend auf ECHTER Spieler-Distanz (ohne margin)
+	var actual_spread = max(size.x - screen_margin * 2, size.z - screen_margin * 2)
+	actual_spread = max(actual_spread, 0)  # Nicht negativ
+
+	# Sanft zwischen min und max interpolieren
+	var cfg = GameManager.config
+	var spread_factor = clamp(actual_spread / 100.0, 0.0, 1.0)
+	var needed_height = lerpf(cfg.camera_min_height, cfg.camera_max_height, spread_factor)
 	_target_height = needed_height
 
 	# SMOOTH UPDATES
-	_current_position = _current_position.lerp(_target_position, position_smooth_speed * delta)
-	_current_height = lerpf(_current_height, _target_height, height_smooth_speed * delta)
+	_current_position = _current_position.lerp(_target_position, cfg.camera_smooth_speed * delta)
+	_current_height = lerpf(_current_height, _target_height, cfg.camera_height_smooth_speed * delta)
 
 	# Smooth Richtungs-Interpolation (Slerp für Vektoren)
 	_current_direction = _smooth_direction(_current_direction, _target_direction, rotation_smooth_speed * delta)

@@ -41,10 +41,6 @@ func setup(race_vehicles: Array[Vehicle], path: Path3D) -> void:
 	_curve = racing_line.curve
 	track_length = _curve.get_baked_length()
 
-	print("RaceTracker Setup: %d Fahrzeuge, Streckenlänge: %.1f, Punkte: %d" % [
-		vehicles.size(), track_length, _curve.point_count
-	])
-
 	# Alle Fahrzeuge initialisieren
 	lap_counts.clear()
 	last_offsets.clear()
@@ -54,7 +50,6 @@ func setup(race_vehicles: Array[Vehicle], path: Path3D) -> void:
 		lap_counts[vehicle] = 0
 		last_offsets[vehicle] = _get_raw_offset(vehicle)
 		last_positions[vehicle] = 0
-		print("  - %s: Start-Offset %.1f" % [vehicle.name, last_offsets[vehicle]])
 
 ## Setzt alle Fahrzeuge auf Runde 0 zurück (für neue Runde)
 func reset_laps() -> void:

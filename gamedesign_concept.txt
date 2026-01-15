@@ -1,0 +1,144 @@
+# Game Design Concept - Top-Down Combat Racing Game
+# Optimized for AI Sprite Generation (Ludi.ai)
+
+## Art Style Reference
+Primary Inspiration: "Wrecked: Revenge Revisited" (2012)
+- Colorful, vibrant arcade aesthetic
+- Stylized cartoon look with bold outlines
+- Exaggerated proportions for readability at small sizes
+- High contrast colors for gameplay clarity
+- Glossy, toy-like vehicle designs
+
+## Visual Style Keywords
+- Cartoon racing
+- Isometric/top-down perspective
+- Vibrant saturated colors
+- Cel-shaded look
+- Arcade style
+- Toy-like vehicles
+- Bold black outlines
+- Clean vector style
+
+---
+
+## VEHICLES (Top-Down View)
+
+### Style Guidelines
+- Viewed from directly above (bird's eye view)
+- Chunky, rounded shapes
+- Visible wheels on sides
+- Exaggerated features (big exhausts, spoilers)
+- Clear front/back orientation
+- Size: ~64x64 or 128x128 pixels
+
+### Vehicle 1: Sports Car
+Prompt: "Top-down view, cartoon sports car, blue metallic paint, chunky rounded design, visible wheels, small spoiler, glossy finish, black outline, arcade racing game sprite, white background, clean vector style"
+
+### Vehicle 2: Muscle Car
+Prompt: "Top-down view, cartoon muscle car, red with white racing stripes, big engine hood bulge, chrome exhausts, chunky design, glossy toy-like, black outline, arcade game sprite, white background"
+
+### Vehicle 3: Off-Road Truck
+Prompt: "Top-down view, cartoon monster truck, green camouflage, big chunky wheels, roll cage, aggressive design, toy-like proportions, black outline, racing game sprite, white background"
+
+### Vehicle 4: Rally Car
+Prompt: "Top-down view, cartoon rally car, yellow with black accents, roof lights, mudflaps, sporty compact design, glossy finish, black outline, arcade sprite, white background"
+
+---
+
+## WEAPONS & POWER-UPS
+
+### Style Guidelines
+- Bright, glowing appearance
+- Instantly recognizable silhouettes
+- Cartoon bomb/rocket aesthetic
+- Size: 32x32 or 48x48 pixels
+
+### Rocket/Missile
+Prompt: "Top-down view, cartoon rocket missile, red with yellow fins, chunky toy design, slight glow effect, black outline, game power-up sprite, white background, clean simple"
+
+### Shield Power-up
+Prompt: "Cartoon shield icon, blue glowing energy bubble, hexagonal pattern, bright cyan glow, game power-up, simple clean design, black outline, white background"
+
+### Speed Boost
+Prompt: "Cartoon speed boost icon, orange flames, lightning bolt shape, bright glowing, arcade game power-up, simple bold design, black outline, white background"
+
+### Mine
+Prompt: "Top-down view, cartoon land mine, black spherical with red spikes, dangerous look, toy-like design, game sprite, black outline, white background"
+
+### Oil Slick
+Prompt: "Top-down view, cartoon oil puddle, black glossy liquid, rainbow reflection, splat shape, game hazard sprite, white background"
+
+---
+
+## TRACK ELEMENTS
+
+### Road/Track Tiles
+Prompt: "Top-down view, cartoon race track asphalt tile, dark gray with white lane markings, slightly worn texture, clean game tile, seamless edges"
+
+### Barriers/Walls
+Prompt: "Top-down view, cartoon tire barrier, stacked red and white tires, racing track boundary, chunky design, game sprite, white background"
+
+### Boost Pad
+Prompt: "Top-down view, cartoon speed boost pad, glowing orange arrows, metallic plate, racing track element, bright neon glow, game sprite"
+
+### Checkpoint
+Prompt: "Top-down view, cartoon racing checkpoint, yellow and black stripes, glowing finish line, arcade style, game sprite"
+
+---
+
+## EFFECTS & PARTICLES
+
+### Explosion
+Prompt: "Cartoon explosion sprite sheet, orange and yellow fire burst, comic style, black smoke clouds, multiple frames, game effect, transparent background"
+
+### Smoke/Drift
+Prompt: "Cartoon tire smoke puff, white gray clouds, drift effect, simple shapes, game particle sprite, transparent background"
+
+### Spark/Hit Effect
+Prompt: "Cartoon impact sparks, yellow white stars, collision effect, comic book style, game sprite, transparent background"
+
+---
+
+## UI ELEMENTS
+
+### Health/Lives Icon
+Prompt: "Cartoon heart icon, red glossy, game UI element, bold black outline, simple clean design, white background"
+
+### Score Display Background
+Prompt: "Cartoon game UI panel, dark blue metallic, rounded corners, glossy finish, racing theme, clean design"
+
+---
+
+## COLOR PALETTE
+
+### Player Colors
+- Player 1: #3388FF (Bright Blue)
+- Player 2: #FF4444 (Racing Red)
+- Player 3: #44DD44 (Vibrant Green)
+- Player 4: #FFCC22 (Golden Yellow)
+
+### Environment
+- Track: #3A3A3A (Dark Asphalt)
+- Grass: #44AA44 (Cartoon Green)
+- Sand: #DDBB77 (Warm Beige)
+- Water: #4488DD (Bright Blue)
+
+### Effects
+- Fire: #FF6600 → #FFCC00 (Orange to Yellow gradient)
+- Energy: #00FFFF (Cyan glow)
+- Warning: #FF0000 (Pure Red)
+
+---
+
+## GENERAL PROMPT TIPS FOR LUDI.AI
+
+1. Always specify "top-down view" or "bird's eye view"
+2. Include "game sprite" or "arcade game asset"
+3. Add "white background" for easy extraction
+4. Use "black outline" for cartoon style
+5. Mention "clean", "simple", "bold" for clarity
+6. Specify pixel size if possible (64x64, 128x128)
+7. Add "transparent background" for effects/particles
+
+## Example Full Prompt Structure
+"[View angle], [art style] [object], [color/material], [key features], [style keywords], [outline style], [purpose], [background]"

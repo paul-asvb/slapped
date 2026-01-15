@@ -1,11 +1,8 @@
 extends Node3D
 ## Hauptspielszene - Lädt Track und spawnt Spieler (3D)
 
-const VehicleScene = preload("res://scenes/vehicles/vehicle.tscn")
+var VehicleScene = load("res://scenes/vehicles/vehicle.tscn")
 const CameraScene = preload("res://scenes/vehicles/dynamic_camera.tscn")
-
-@export var player_count: int = 2
-@export var out_of_bounds_margin: float = 8.0  # Extra Rand bevor Out-of-Bounds
 
 var camera: DynamicCamera
 var race_tracker: RaceTracker
@@ -44,7 +41,8 @@ func _setup_camera() -> void:
 	add_child(camera)
 
 func _spawn_players() -> void:
-	for i in range(min(player_count, spawn_points.size())):
+	var count = min(GameManager.config.player_count, spawn_points.size())
+	for i in range(count):
 		_create_vehicle(i)
 	alive_count = vehicles.size()
 
@@ -54,10 +52,7 @@ func _init_systems() -> void:
 
 	if not racing_line:
 		push_error("Game: RacingLine nicht gefunden unter $Track/RacingLine!")
-		# Versuche alternative Pfade
 		racing_line = $Track.get_node_or_null("RacingLine") as Path3D
-		if racing_line:
-			print("Game: RacingLine gefunden via get_node_or_null")
 
 	# RaceTracker initialisieren
 	race_tracker.setup(vehicles, racing_line)
@@ -86,6 +81,16 @@ func _give_start_immunity() -> void:
 		if is_instance_valid(vehicle):
 			vehicle.respawn_immunity = false
 
+func _apply_color_to_meshes(node: Node, color: Color) -> void:
+	# Rekursiv alle MeshInstance3D finden und einfärben
+	if node is MeshInstance3D:
+		var mesh_instance = node as MeshInstance3D
+		var material = StandardMaterial3D.new()
+		material.albedo_color = color
+		mesh_instance.material_override = material
+	for child in node.get_children():
+		_apply_color_to_meshes(child, color)
+
 func _create_vehicle(idx: int) -> Vehicle:
 	var vehicle = VehicleScene.instantiate()
 	vehicle.player_id = idx
@@ -98,12 +103,10 @@ func _create_vehicle(idx: int) -> Vehicle:
 	vehicle.global_position = spawn.global_position
 	vehicle.rotation.y = spawn.rotation.y
 
-	# Farbe auf Material setzen
-	var body_mesh = vehicle.get_node("Body") as MeshInstance3D
-	if body_mesh:
-		var material = StandardMaterial3D.new()
-		material.albedo_color = player_colors[idx]
-		body_mesh.material_override = material
+	# Farbe temporär deaktiviert zum Testen
+	#var body_node = vehicle.get_node_or_null("Body")
+	#if body_node:
+	#	_apply_color_to_meshes(body_node, player_colors[idx])
 
 	vehicle._setup_input_actions()
 	vehicle.destroyed.connect(_on_vehicle_destroyed.bind(idx))
@@ -122,8 +125,9 @@ func _check_out_of_bounds() -> void:
 	# Verwende die berechneten sichtbaren Grenzen der Kamera
 	var bounds = camera.get_visible_bounds()
 	var cam_center = bounds["center"]
-	var half_width = bounds["half_width"] + out_of_bounds_margin
-	var half_depth = bounds["half_depth"] + out_of_bounds_margin
+	var margin = GameManager.config.out_of_bounds_margin
+	var half_width = bounds["half_width"] + margin
+	var half_depth = bounds["half_depth"] + margin
 
 	for vehicle in vehicles:
 		if vehicle.is_eliminated or vehicle.respawn_immunity:
@@ -141,9 +145,12 @@ func _handle_out_of_bounds(vehicle: Vehicle) -> void:
 	if _is_restarting:
 		return
 
-	print("OUT OF BOUNDS: %s - Leben vorher: %d" % [vehicle.name, vehicle.lives])
 	vehicle.lose_life()
-	print("OUT OF BOUNDS: %s - Leben nachher: %d" % [vehicle.name, vehicle.lives])
+
+	# Punkte an alle Spieler vergeben, die NICHT out of bounds gegangen sind
+	for other_vehicle in vehicles:
+		if other_vehicle != vehicle and not other_vehicle.is_eliminated:
+			GameManager.add_score(other_vehicle.player_id)
 
 	if vehicle.is_eliminated:
 		# Spieler ist komplett raus
@@ -191,18 +198,16 @@ func _restart_race_from_start() -> void:
 			vehicle.respawn_immunity = false
 
 	_is_restarting = false
-	print("Rennen neu gestartet!")
 
 ## Beendet die aktuelle Runde (Gewinner gefunden)
 func _end_current_round() -> void:
 	_is_restarting = true
 
-	# Gewinner finden
+	# Gewinner finden (Punkte wurden bereits in _handle_out_of_bounds vergeben)
 	var winner_id = -1
 	for vehicle in vehicles:
 		if not vehicle.is_eliminated:
 			winner_id = vehicle.player_id
-			GameManager.add_score(winner_id)
 			break
 
 	GameManager.current_state = GameManager.GameState.ROUND_END
@@ -225,17 +230,14 @@ func _on_vehicle_destroyed(player_id: int) -> void:
 func _start_new_round() -> void:
 	GameManager.current_round += 1
 
-	if GameManager.current_round > GameManager.max_rounds:
-		# Spiel beendet - zeige Endergebnis
-		print("Spiel beendet! Endergebnis:")
-		for i in range(vehicles.size()):
-			print("Spieler %d: %d Punkte" % [i + 1, GameManager.get_score(i)])
+	if GameManager.current_round > GameManager.config.max_rounds:
+		# Spiel beendet
 		return
 
 	# Alle Fahrzeuge zurücksetzen
 	for i in range(vehicles.size()):
 		var vehicle = vehicles[i]
-		vehicle.lives = vehicle.max_lives
+		vehicle.lives = GameManager.config.max_lives
 		vehicle.is_eliminated = false
 		vehicle.respawn_immunity = true  # Start-Immunität
 		vehicle.visible = true

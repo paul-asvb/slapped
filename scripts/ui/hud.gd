@@ -129,10 +129,11 @@ func _update_displays() -> void:
 			else:
 				position_label.text = "Platz: ?"
 
-		score_label.text = "Punkte: %d" % GameManager.get_score(i)
+			# Score mit vehicle.player_id abfragen
+			score_label.text = "Punkte: %d" % GameManager.get_score(vehicle.player_id)
 
 func _update_round_label() -> void:
-	round_label.text = "Runde %d / %d" % [GameManager.current_round, GameManager.max_rounds]
+	round_label.text = "Runde %d / %d" % [GameManager.current_round, GameManager.config.max_rounds]
 
 func _on_round_started() -> void:
 	_update_round_label()

@@ -1,24 +1,30 @@
-[gd_scene load_steps=4 format=3 uid="uid://c6qvwxm8nk5rl"]
+[gd_scene load_steps=4 format=3 uid="uid://newvehicle2024"]
 
 [ext_resource type="Script" path="res://scripts/vehicles/vehicle.gd" id="1_vehicle"]
+[ext_resource type="PackedScene" uid="uid://dc1hmt528is0w" path="res://assets/models/doge/doge-body.glb" id="2_doge"]
+[ext_resource type="PackedScene" uid="uid://b2hu8l1axara7" path="res://assets/models/doge/Wheel.glb" id="3_wheel"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_collision"]
-size = Vector3(1.5, 0.8, 2.5)
-
-[sub_resource type="BoxMesh" id="BoxMesh_body"]
-size = Vector3(1.5, 0.6, 2.5)
+size = Vector3(2.0, 1.0, 4.5)
 
 [node name="Vehicle" type="CharacterBody3D"]
 script = ExtResource("1_vehicle")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("BoxShape3D_collision")
 
-[node name="Body" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
-mesh = SubResource("BoxMesh_body")
+[node name="Body" parent="." instance=ExtResource("2_doge")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.3, 0)
 
-[node name="Cockpit" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.5, 0, 0, 0, 0.4, 0, 0, 0, 0.6, 0, 0.5, 0.3)
-mesh = SubResource("BoxMesh_body")
+[node name="WheelFL" parent="." instance=ExtResource("3_wheel")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0, 0.64, 1.5)
+
+[node name="WheelFR" parent="." instance=ExtResource("3_wheel")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 1.0, 0.64, 1.5)
+
+[node name="WheelRL" parent="." instance=ExtResource("3_wheel")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0, 0.59, -1.26)
+
+[node name="WheelRR" parent="." instance=ExtResource("3_wheel")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 1.0, 0.59, -1.26)

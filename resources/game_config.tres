@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="GameConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/autoload/game_config.gd" id="1_config"]
+
+[resource]
+script = ExtResource("1_config")
+player_count = 2
+max_rounds = 5
+max_lives = 3
+camera_default_height = 25.0
+camera_min_height = 35.0
+camera_max_height = 100.0
+camera_smooth_speed = 4.0
+camera_height_smooth_speed = 8.0
+out_of_bounds_margin = 15.0
+vehicle_max_speed = 40.0
+vehicle_acceleration = 60.0
+vehicle_brake_power = 80.0
+vehicle_gravity = 40.0
