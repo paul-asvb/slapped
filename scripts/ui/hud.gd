@@ -1,6 +1,7 @@
 extends CanvasLayer
 class_name HUD
-## HUD - Zeigt Punktestand, Leben und Rundeninformationen
+## HUD - Zeigt Punktestand, Leben, Platzierung und Rundeninformationen
+## Verwendet RaceTracker für Positions-Daten
 
 @onready var player_panels: Array[Control] = []
 @onready var round_label: Label = $RoundLabel
@@ -8,6 +9,8 @@ class_name HUD
 
 var player_count: int = 0
 var player_colors: Array[Color] = []
+var vehicles_ref: Array[Vehicle] = []
+var race_tracker: RaceTracker
 
 func _ready() -> void:
 	GameManager.round_started.connect(_on_round_started)
@@ -15,8 +18,10 @@ func _ready() -> void:
 	GameManager.player_eliminated.connect(_on_player_eliminated)
 	message_label.visible = false
 
-func setup(vehicles: Array[Vehicle], colors: Array[Color]) -> void:
+func setup(vehicles: Array[Vehicle], colors: Array[Color], tracker: RaceTracker) -> void:
 	player_count = vehicles.size()
+	vehicles_ref = vehicles
+	race_tracker = tracker
 
 	# Panels für jeden Spieler erstellen
 	for i in range(player_count):
@@ -34,19 +39,19 @@ func _create_player_panel(idx: int, player_color: Color, vehicle: Vehicle) -> Co
 
 	# Position basierend auf Spieler-Index
 	var margin = 20
-	var panel_width = 150
+	var panel_width = 180
 	panel.position = Vector2(margin + idx * (panel_width + margin), margin)
 
 	# Farbiger Rand links
 	var color_bar = ColorRect.new()
-	color_bar.size = Vector2(6, 65)
+	color_bar.size = Vector2(6, 83)
 	color_bar.color = player_color
 	panel.add_child(color_bar)
 
 	# Hintergrund
 	var bg = ColorRect.new()
 	bg.position = Vector2(6, 0)
-	bg.size = Vector2(panel_width - 6, 65)
+	bg.size = Vector2(174, 83)
 	bg.color = Color(0, 0, 0, 0.7)
 	panel.add_child(bg)
 
@@ -59,11 +64,19 @@ func _create_player_panel(idx: int, player_color: Color, vehicle: Vehicle) -> Co
 	name_label.add_theme_font_size_override("font_size", 16)
 	panel.add_child(name_label)
 
+	# Platz-Anzeige (Debug)
+	var position_label = Label.new()
+	position_label.name = "PositionLabel"
+	position_label.text = "Platz: 1"
+	position_label.position = Vector2(14, 25)
+	position_label.add_theme_color_override("font_color", Color.YELLOW)
+	panel.add_child(position_label)
+
 	# Leben-Anzeige
 	var lives_label = Label.new()
 	lives_label.name = "LivesLabel"
 	lives_label.text = "Leben: %d" % vehicle.lives
-	lives_label.position = Vector2(14, 25)
+	lives_label.position = Vector2(14, 43)
 	lives_label.add_theme_color_override("font_color", Color.WHITE)
 	panel.add_child(lives_label)
 
@@ -71,7 +84,7 @@ func _create_player_panel(idx: int, player_color: Color, vehicle: Vehicle) -> Co
 	var score_label = Label.new()
 	score_label.name = "ScoreLabel"
 	score_label.text = "Punkte: 0"
-	score_label.position = Vector2(14, 43)
+	score_label.position = Vector2(14, 61)
 	score_label.add_theme_color_override("font_color", Color.WHITE)
 	panel.add_child(score_label)
 
@@ -81,16 +94,33 @@ func _process(_delta: float) -> void:
 	_update_displays()
 
 func _update_displays() -> void:
+	if not race_tracker:
+		return
+
+	var positions = race_tracker.get_all_positions()
+
 	for i in range(player_panels.size()):
 		var panel = player_panels[i]
+		var position_label = panel.get_node("PositionLabel") as Label
 		var lives_label = panel.get_node("LivesLabel") as Label
 		var score_label = panel.get_node("ScoreLabel") as Label
 
-		var vehicle = get_parent().vehicles[i] if get_parent().has_method("_check_out_of_bounds") else null
+		var vehicle = vehicles_ref[i] if i < vehicles_ref.size() else null
 		if vehicle:
+			# Platzierung + Fortschritt anzeigen (Debug)
+			var place = positions.get(vehicle, i + 1)
+			var progress_percent = race_tracker.get_progress_percent(vehicle) * 100.0
+
+			position_label.text = "Platz: %d (%.1f%%)" % [place, progress_percent]
+			if place == 1:
+				position_label.add_theme_color_override("font_color", Color.GOLD)
+			else:
+				position_label.add_theme_color_override("font_color", Color.WHITE)
+
 			lives_label.text = "Leben: %d" % vehicle.lives
 			if vehicle.is_eliminated:
 				lives_label.add_theme_color_override("font_color", Color.RED)
+				position_label.text = "Platz: - (OUT)"
 			else:
 				lives_label.add_theme_color_override("font_color", Color.WHITE)
 

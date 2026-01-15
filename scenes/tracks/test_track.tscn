@@ -1,4 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://dkn4xp7q2m8rv"]
+[gd_scene load_steps=6 format=3 uid="uid://dkn4xp7q2m8rv"]
+
+[sub_resource type="Curve2D" id="racing_line_curve"]
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, 1050, -625, 0, 0, 0, 0, 0, -625, 0, 0, 0, 0, -1050, -625, 0, 0, 0, 0, -1050, 0, 0, 0, 0, 0, -1050, 625, 0, 0, 0, 0, 0, 625, 0, 0, 0, 0, 1050, 625, 0, 0, 0, 0, 1050, 0)
+}
+point_count = 8
 
 [sub_resource type="RectangleShape2D" id="shape_outer_long"]
 size = Vector2(2600, 40)
@@ -145,40 +151,43 @@ color = Color(0.5, 0.5, 0.5, 1)
 [node name="StartLine" type="Node2D" parent="."]
 
 [node name="Line" type="ColorRect" parent="StartLine"]
-offset_left = 720.0
-offset_top = -700.0
-offset_right = 735.0
-offset_bottom = -370.0
+offset_left = 1050.0
+offset_top = -850.0
+offset_right = 1065.0
+offset_bottom = -400.0
 color = Color(1, 1, 1, 0.8)
 
 [node name="Checkers1" type="ColorRect" parent="StartLine"]
-offset_left = 705.0
-offset_top = -700.0
-offset_right = 720.0
-offset_bottom = -685.0
+offset_left = 1035.0
+offset_top = -850.0
+offset_right = 1050.0
+offset_bottom = -835.0
 color = Color(0, 0, 0, 1)
 
 [node name="Checkers2" type="ColorRect" parent="StartLine"]
-offset_left = 735.0
-offset_top = -685.0
-offset_right = 750.0
-offset_bottom = -670.0
+offset_left = 1065.0
+offset_top = -835.0
+offset_right = 1080.0
+offset_bottom = -820.0
 color = Color(0, 0, 0, 1)
 
 [node name="SpawnPoints" type="Node2D" parent="."]
 
 [node name="Spawn1" type="Marker2D" parent="SpawnPoints"]
-position = Vector2(800, -620)
+position = Vector2(1050, -480)
 rotation = -1.5708
 
 [node name="Spawn2" type="Marker2D" parent="SpawnPoints"]
-position = Vector2(950, -620)
+position = Vector2(1050, -580)
 rotation = -1.5708
 
 [node name="Spawn3" type="Marker2D" parent="SpawnPoints"]
-position = Vector2(1100, -620)
+position = Vector2(1050, -680)
 rotation = -1.5708
 
 [node name="Spawn4" type="Marker2D" parent="SpawnPoints"]
-position = Vector2(1250, -620)
+position = Vector2(1050, -780)
 rotation = -1.5708
+
+[node name="RacingLine" type="Path2D" parent="."]
+curve = SubResource("racing_line_curve")

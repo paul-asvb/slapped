@@ -8,6 +8,7 @@ const CameraScene = preload("res://scenes/vehicles/dynamic_camera.tscn")
 @export var out_of_bounds_margin: float = 100.0  # Extra Rand bevor Out-of-Bounds
 
 var camera: DynamicCamera
+var race_tracker: RaceTracker
 var vehicles: Array[Vehicle] = []
 var spawn_points: Array[Node2D] = []
 var alive_count: int = 0
@@ -24,21 +25,51 @@ var player_colors: Array[Color] = [
 
 func _ready() -> void:
 	spawn_points.assign($Track/SpawnPoints.get_children())
+	_setup_race_tracker()
 	_setup_camera()
 	_spawn_players()
-	_init_camera_position()
+	_init_systems()
 	_give_start_immunity()
-	hud.setup(vehicles, player_colors)
 	GameManager.start_game()
 
+func _setup_race_tracker() -> void:
+	# RaceTracker erstellen
+	race_tracker = RaceTracker.new()
+	race_tracker.name = "RaceTracker"
+	add_child(race_tracker)
+
+func _setup_camera() -> void:
+	camera = CameraScene.instantiate()
+	add_child(camera)
+
+func _spawn_players() -> void:
+	for i in range(min(player_count, spawn_points.size())):
+		_create_vehicle(i)
+	alive_count = vehicles.size()
+
+func _init_systems() -> void:
+	# Racing-Line vom Track holen
+	var racing_line = $Track/RacingLine as Path2D
+
+	# RaceTracker initialisieren
+	race_tracker.setup(vehicles, racing_line)
+
+	# Kamera mit RaceTracker verbinden
+	camera.setup(race_tracker)
+
+	# HUD mit RaceTracker verbinden
+	hud.setup(vehicles, player_colors, race_tracker)
+
+	# Kamera initial positionieren
+	_init_camera_position()
+
 func _init_camera_position() -> void:
-	# Kamera direkt an Startposition setzen und Leader festlegen
+	# Kamera direkt an Startposition setzen
 	if vehicles.size() > 0:
-		var leader = vehicles[0]
-		camera.set_leader(leader)
-		var forward_dir = Vector2.UP.rotated(leader.rotation)
+		var first_vehicle = vehicles[0]
+		var forward_dir = Vector2.UP.rotated(first_vehicle.rotation)
 		camera.position_smoothing_enabled = false
-		camera.global_position = leader.global_position + forward_dir * camera.look_ahead
+		camera.global_position = first_vehicle.global_position + forward_dir * camera.look_ahead
 		camera.zoom = Vector2(camera.default_zoom, camera.default_zoom)
 		await get_tree().process_frame
 		camera.position_smoothing_enabled = true
@@ -52,15 +83,6 @@ func _give_start_immunity() -> void:
 	for vehicle in vehicles:
 		if is_instance_valid(vehicle):
 			vehicle.respawn_immunity = false
-
-func _setup_camera() -> void:
-	camera = CameraScene.instantiate()
-	add_child(camera)
-
-func _spawn_players() -> void:
-	for i in range(min(player_count, spawn_points.size())):
-		_create_vehicle(i)
-	alive_count = vehicles.size()
 
 func _create_vehicle(idx: int) -> Vehicle:
 	var vehicle = VehicleScene.instantiate()
@@ -108,7 +130,6 @@ func _handle_out_of_bounds(vehicle: Vehicle) -> void:
 		vehicle.visible = false
 		vehicle.set_physics_process(false)
 		alive_count -= 1
-		_update_leader()
 		_check_round_end()
 	else:
 		# Respawn am Spawnpunkt
@@ -117,14 +138,6 @@ func _handle_out_of_bounds(vehicle: Vehicle) -> void:
 		vehicle.reset_to_spawn(sp.position, sp.rotation)
 		# Immunität nach Verzögerung aufheben
 		_delayed_respawn_finish(vehicle)
-
-func _update_leader() -> void:
-	# Ersten aktiven Spieler als Leader setzen
-	for vehicle in vehicles:
-		if not vehicle.is_eliminated:
-			camera.set_leader(vehicle)
-			return
-	camera.clear_leader()
 
 func _delayed_respawn_finish(vehicle: Vehicle) -> void:
 	# Warte kurz, dann Immunität aufheben
@@ -172,13 +185,15 @@ func _start_new_round() -> void:
 		vehicle.set_physics_process(true)
 		vehicle.reset_to_spawn(spawn_points[i].position, spawn_points[i].rotation)
 
-	# Kamera auf ersten Spieler setzen und sofort positionieren
+	# RaceTracker Runden zurücksetzen
+	race_tracker.reset_laps()
+
+	# Kamera sofort an Startposition setzen
 	if vehicles.size() > 0:
-		var leader = vehicles[0]
-		camera.set_leader(leader)
-		var forward_dir = Vector2.UP.rotated(leader.rotation)
+		var first_vehicle = vehicles[0]
+		var forward_dir = Vector2.UP.rotated(first_vehicle.rotation)
 		camera.position_smoothing_enabled = false
-		camera.global_position = leader.global_position + forward_dir * camera.look_ahead
+		camera.global_position = first_vehicle.global_position + forward_dir * camera.look_ahead
 		camera.position_smoothing_enabled = true
 
 	alive_count = vehicles.size()
