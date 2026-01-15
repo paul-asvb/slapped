@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8kmn3x5vp4qy"]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="RoundLabel" type="Label" parent="."]
+offset_left = 540.0
+offset_top = 10.0
+offset_right = 740.0
+offset_bottom = 36.0
+horizontal_alignment = 1
+text = "Runde 1 / 5"
+
+[node name="MessageLabel" type="Label" parent="."]
+offset_left = 440.0
+offset_top = 340.0
+offset_right = 840.0
+offset_bottom = 380.0
+horizontal_alignment = 1
+text = "Spieler 1 gewinnt die Runde!"

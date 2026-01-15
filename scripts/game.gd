@@ -1,0 +1,199 @@
+extends Node2D
+## Hauptspielszene - Lädt Track und spawnt Spieler
+
+const VehicleScene = preload("res://scenes/vehicles/vehicle.tscn")
+const CameraScene = preload("res://scenes/vehicles/dynamic_camera.tscn")
+
+@export var player_count: int = 2
+@export var out_of_bounds_margin: float = 100.0  # Extra Rand bevor Out-of-Bounds
+
+var camera: DynamicCamera
+var vehicles: Array[Vehicle] = []
+var spawn_points: Array[Node2D] = []
+var alive_count: int = 0
+
+# Spieler-Farben
+var player_colors: Array[Color] = [
+	Color(0.2, 0.5, 1.0),   # Blau
+	Color(1.0, 0.3, 0.3),   # Rot
+	Color(0.3, 0.9, 0.3),   # Grün
+	Color(1.0, 0.8, 0.2),   # Gelb
+]
+
+@onready var hud: HUD = $HUD
+
+func _ready() -> void:
+	spawn_points.assign($Track/SpawnPoints.get_children())
+	_setup_camera()
+	_spawn_players()
+	_init_camera_position()
+	_give_start_immunity()
+	hud.setup(vehicles, player_colors)
+	GameManager.start_game()
+
+func _init_camera_position() -> void:
+	# Kamera direkt an Startposition setzen und Leader festlegen
+	if vehicles.size() > 0:
+		var leader = vehicles[0]
+		camera.set_leader(leader)
+		var forward_dir = Vector2.UP.rotated(leader.rotation)
+		camera.position_smoothing_enabled = false
+		camera.global_position = leader.global_position + forward_dir * camera.look_ahead
+		camera.zoom = Vector2(camera.default_zoom, camera.default_zoom)
+		await get_tree().process_frame
+		camera.position_smoothing_enabled = true
+
+func _give_start_immunity() -> void:
+	# Alle Spieler bekommen kurze Start-Immunität
+	for vehicle in vehicles:
+		vehicle.respawn_immunity = true
+	# Nach kurzer Zeit aufheben
+	await get_tree().create_timer(1.0).timeout
+	for vehicle in vehicles:
+		if is_instance_valid(vehicle):
+			vehicle.respawn_immunity = false
+
+func _setup_camera() -> void:
+	camera = CameraScene.instantiate()
+	add_child(camera)
+
+func _spawn_players() -> void:
+	for i in range(min(player_count, spawn_points.size())):
+		_create_vehicle(i)
+	alive_count = vehicles.size()
+
+func _create_vehicle(idx: int) -> Vehicle:
+	var vehicle = VehicleScene.instantiate()
+	vehicle.player_id = idx
+	vehicle.position = spawn_points[idx].position
+	vehicle.rotation = spawn_points[idx].rotation
+	vehicle.get_node("Sprite").modulate = player_colors[idx]
+	vehicle._setup_input_actions()
+	vehicle.destroyed.connect(_on_vehicle_destroyed.bind(idx))
+
+	$Track.add_child(vehicle)
+	vehicles.append(vehicle)
+	GameManager.register_player(vehicle)
+	return vehicle
+
+func _physics_process(_delta: float) -> void:
+	_check_out_of_bounds()
+
+func _check_out_of_bounds() -> void:
+	if GameManager.current_state != GameManager.GameState.PLAYING:
+		return
+
+	var viewport_size = get_viewport_rect().size
+	var cam_pos = camera.global_position
+	var zoom_factor = camera.zoom.x
+
+	# Sichtbare Grenzen berechnen (basierend auf tatsächlicher Kamera-Position)
+	var half_width = (viewport_size.x / 2.0) / zoom_factor + out_of_bounds_margin
+	var half_height = (viewport_size.y / 2.0) / zoom_factor + out_of_bounds_margin
+
+	for vehicle in vehicles:
+		if vehicle.is_eliminated or vehicle.respawn_immunity:
+			continue
+
+		# Distanz zur Kamera prüfen
+		var rel_pos = vehicle.global_position - cam_pos
+
+		if abs(rel_pos.x) > half_width or abs(rel_pos.y) > half_height:
+			_handle_out_of_bounds(vehicle)
+
+func _handle_out_of_bounds(vehicle: Vehicle) -> void:
+	vehicle.lose_life()
+
+	if vehicle.is_eliminated:
+		vehicle.visible = false
+		vehicle.set_physics_process(false)
+		alive_count -= 1
+		_update_leader()
+		_check_round_end()
+	else:
+		# Respawn am Spawnpunkt
+		vehicle.respawn_immunity = true
+		var sp = spawn_points[vehicle.player_id]
+		vehicle.reset_to_spawn(sp.position, sp.rotation)
+		# Immunität nach Verzögerung aufheben
+		_delayed_respawn_finish(vehicle)
+
+func _update_leader() -> void:
+	# Ersten aktiven Spieler als Leader setzen
+	for vehicle in vehicles:
+		if not vehicle.is_eliminated:
+			camera.set_leader(vehicle)
+			return
+	camera.clear_leader()
+
+func _delayed_respawn_finish(vehicle: Vehicle) -> void:
+	# Warte kurz, dann Immunität aufheben
+	await get_tree().create_timer(1.0).timeout
+	if is_instance_valid(vehicle) and not vehicle.is_eliminated:
+		vehicle.respawn_immunity = false
+
+func _on_vehicle_destroyed(player_id: int) -> void:
+	GameManager.eliminate_player(player_id)
+
+func _check_round_end() -> void:
+	if alive_count <= 1:
+		# Gewinner finden
+		var winner_id = -1
+		for vehicle in vehicles:
+			if not vehicle.is_eliminated:
+				winner_id = vehicle.player_id
+				GameManager.add_score(winner_id)
+				break
+
+		GameManager.current_state = GameManager.GameState.ROUND_END
+		GameManager.round_ended.emit(winner_id)
+
+		# Nächste Runde nach kurzer Pause starten
+		await get_tree().create_timer(2.0).timeout
+		_start_new_round()
+
+func _start_new_round() -> void:
+	GameManager.current_round += 1
+
+	if GameManager.current_round > GameManager.max_rounds:
+		# Spiel beendet - zeige Endergebnis
+		print("Spiel beendet! Endergebnis:")
+		for i in range(vehicles.size()):
+			print("Spieler %d: %d Punkte" % [i + 1, GameManager.get_score(i)])
+		return
+
+	# Alle Fahrzeuge zurücksetzen
+	for i in range(vehicles.size()):
+		var vehicle = vehicles[i]
+		vehicle.lives = vehicle.max_lives
+		vehicle.is_eliminated = false
+		vehicle.respawn_immunity = true  # Start-Immunität
+		vehicle.visible = true
+		vehicle.set_physics_process(true)
+		vehicle.reset_to_spawn(spawn_points[i].position, spawn_points[i].rotation)
+
+	# Kamera auf ersten Spieler setzen und sofort positionieren
+	if vehicles.size() > 0:
+		var leader = vehicles[0]
+		camera.set_leader(leader)
+		var forward_dir = Vector2.UP.rotated(leader.rotation)
+		camera.position_smoothing_enabled = false
+		camera.global_position = leader.global_position + forward_dir * camera.look_ahead
+		camera.position_smoothing_enabled = true
+
+	alive_count = vehicles.size()
+	GameManager.current_state = GameManager.GameState.PLAYING
+	GameManager.round_started.emit()
+
+	# Start-Immunität nach kurzer Zeit aufheben
+	await get_tree().create_timer(1.0).timeout
+	for vehicle in vehicles:
+		if is_instance_valid(vehicle):
+			vehicle.respawn_immunity = false
+
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		if GameManager.current_state == GameManager.GameState.PLAYING:
+			GameManager.pause_game()
+		elif GameManager.current_state == GameManager.GameState.PAUSED:
+			GameManager.resume_game()

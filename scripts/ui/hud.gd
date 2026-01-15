@@ -1,0 +1,122 @@
+extends CanvasLayer
+class_name HUD
+## HUD - Zeigt Punktestand, Leben und Rundeninformationen
+
+@onready var player_panels: Array[Control] = []
+@onready var round_label: Label = $RoundLabel
+@onready var message_label: Label = $MessageLabel
+
+var player_count: int = 0
+var player_colors: Array[Color] = []
+
+func _ready() -> void:
+	GameManager.round_started.connect(_on_round_started)
+	GameManager.round_ended.connect(_on_round_ended)
+	GameManager.player_eliminated.connect(_on_player_eliminated)
+	message_label.visible = false
+
+func setup(vehicles: Array[Vehicle], colors: Array[Color]) -> void:
+	player_count = vehicles.size()
+
+	# Panels für jeden Spieler erstellen
+	for i in range(player_count):
+		var color = colors[i].lightened(0.2)
+		player_colors.append(color)
+		var panel = _create_player_panel(i, color, vehicles[i])
+		player_panels.append(panel)
+		add_child(panel)
+
+	_update_round_label()
+
+func _create_player_panel(idx: int, player_color: Color, vehicle: Vehicle) -> Control:
+	var panel = Control.new()
+	panel.name = "Player%d" % (idx + 1)
+
+	# Position basierend auf Spieler-Index
+	var margin = 20
+	var panel_width = 150
+	panel.position = Vector2(margin + idx * (panel_width + margin), margin)
+
+	# Farbiger Rand links
+	var color_bar = ColorRect.new()
+	color_bar.size = Vector2(6, 65)
+	color_bar.color = player_color
+	panel.add_child(color_bar)
+
+	# Hintergrund
+	var bg = ColorRect.new()
+	bg.position = Vector2(6, 0)
+	bg.size = Vector2(panel_width - 6, 65)
+	bg.color = Color(0, 0, 0, 0.7)
+	panel.add_child(bg)
+
+	# Spieler-Name mit Farbe
+	var name_label = Label.new()
+	name_label.name = "NameLabel"
+	name_label.text = "SPIELER %d" % (idx + 1)
+	name_label.position = Vector2(14, 5)
+	name_label.add_theme_color_override("font_color", player_color)
+	name_label.add_theme_font_size_override("font_size", 16)
+	panel.add_child(name_label)
+
+	# Leben-Anzeige
+	var lives_label = Label.new()
+	lives_label.name = "LivesLabel"
+	lives_label.text = "Leben: %d" % vehicle.lives
+	lives_label.position = Vector2(14, 25)
+	lives_label.add_theme_color_override("font_color", Color.WHITE)
+	panel.add_child(lives_label)
+
+	# Punkte-Anzeige
+	var score_label = Label.new()
+	score_label.name = "ScoreLabel"
+	score_label.text = "Punkte: 0"
+	score_label.position = Vector2(14, 43)
+	score_label.add_theme_color_override("font_color", Color.WHITE)
+	panel.add_child(score_label)
+
+	return panel
+
+func _process(_delta: float) -> void:
+	_update_displays()
+
+func _update_displays() -> void:
+	for i in range(player_panels.size()):
+		var panel = player_panels[i]
+		var lives_label = panel.get_node("LivesLabel") as Label
+		var score_label = panel.get_node("ScoreLabel") as Label
+
+		var vehicle = get_parent().vehicles[i] if get_parent().has_method("_check_out_of_bounds") else null
+		if vehicle:
+			lives_label.text = "Leben: %d" % vehicle.lives
+			if vehicle.is_eliminated:
+				lives_label.add_theme_color_override("font_color", Color.RED)
+			else:
+				lives_label.add_theme_color_override("font_color", Color.WHITE)
+
+		score_label.text = "Punkte: %d" % GameManager.get_score(i)
+
+func _update_round_label() -> void:
+	round_label.text = "Runde %d / %d" % [GameManager.current_round, GameManager.max_rounds]
+
+func _on_round_started() -> void:
+	_update_round_label()
+	message_label.visible = false
+	# Namen zurücksetzen (ohne [OUT])
+	for i in range(player_panels.size()):
+		var panel = player_panels[i]
+		var name_label = panel.get_node("NameLabel") as Label
+		name_label.text = "SPIELER %d" % (i + 1)
+
+func _on_round_ended(winner_id: int) -> void:
+	message_label.visible = true
+	if winner_id >= 0:
+		message_label.text = "Spieler %d gewinnt die Runde!" % (winner_id + 1)
+	else:
+		message_label.text = "Unentschieden!"
+
+func _on_player_eliminated(player_id: int) -> void:
+	if player_id < player_panels.size():
+		var panel = player_panels[player_id]
+		var name_label = panel.get_node("NameLabel") as Label
+		name_label.text += " [OUT]"

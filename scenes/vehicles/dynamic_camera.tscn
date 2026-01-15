@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://b7qkm3x5np2wy"]
+
+[ext_resource type="Script" path="res://scripts/vehicles/dynamic_camera.gd" id="1_camera"]
+
+[node name="DynamicCamera" type="Camera2D"]
+script = ExtResource("1_camera")
+min_zoom = 0.5
+max_zoom = 1.5
+zoom_margin = 150.0
+smooth_speed = 5.0
