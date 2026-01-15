@@ -12,6 +12,7 @@ var race_tracker: RaceTracker
 var vehicles: Array[Vehicle] = []
 var spawn_points: Array[Node2D] = []
 var alive_count: int = 0
+var _is_restarting: bool = false  # Verhindert mehrfaches Triggern
 
 # Spieler-Farben
 var player_colors: Array[Color] = [
@@ -50,6 +51,13 @@ func _spawn_players() -> void:
 func _init_systems() -> void:
 	# Racing-Line vom Track holen
 	var racing_line = $Track/RacingLine as Path2D
+
+	if not racing_line:
+		push_error("Game: RacingLine nicht gefunden unter $Track/RacingLine!")
+		# Versuche alternative Pfade
+		racing_line = $Track.get_node_or_null("RacingLine") as Path2D
+		if racing_line:
+			print("Game: RacingLine gefunden via get_node_or_null")
 
 	# RaceTracker initialisieren
 	race_tracker.setup(vehicles, racing_line)
@@ -124,46 +132,97 @@ func _check_out_of_bounds() -> void:
 			_handle_out_of_bounds(vehicle)
 
 func _handle_out_of_bounds(vehicle: Vehicle) -> void:
+	# Verhindere mehrfaches Triggern während Neustart
+	if _is_restarting:
+		return
+
+	print("OUT OF BOUNDS: %s - Leben vorher: %d" % [vehicle.name, vehicle.lives])
 	vehicle.lose_life()
+	print("OUT OF BOUNDS: %s - Leben nachher: %d" % [vehicle.name, vehicle.lives])
 
 	if vehicle.is_eliminated:
+		# Spieler ist komplett raus
 		vehicle.visible = false
 		vehicle.set_physics_process(false)
 		alive_count -= 1
-		_check_round_end()
-	else:
-		# Respawn am Spawnpunkt
-		vehicle.respawn_immunity = true
-		var sp = spawn_points[vehicle.player_id]
-		vehicle.reset_to_spawn(sp.position, sp.rotation)
-		# Immunität nach Verzögerung aufheben
-		_delayed_respawn_finish(vehicle)
 
-func _delayed_respawn_finish(vehicle: Vehicle) -> void:
-	# Warte kurz, dann Immunität aufheben
-	await get_tree().create_timer(1.0).timeout
-	if is_instance_valid(vehicle) and not vehicle.is_eliminated:
-		vehicle.respawn_immunity = false
+		if alive_count <= 1:
+			# Runde beendet - Gewinner ermitteln
+			_end_current_round()
+		else:
+			# Rennen neu starten (ohne den eliminierten Spieler)
+			_restart_race_from_start()
+	else:
+		# Spieler hat noch Leben - Rennen neu starten
+		_restart_race_from_start()
+
+## Startet das Rennen neu von der Startlinie (alle Spieler zurück zum Start)
+func _restart_race_from_start() -> void:
+	_is_restarting = true
+
+	# Alle aktiven Spieler zurück zum Start
+	for i in range(vehicles.size()):
+		var vehicle = vehicles[i]
+		if vehicle.is_eliminated:
+			continue
+
+		vehicle.respawn_immunity = true
+		vehicle.reset_to_spawn(spawn_points[i].position, spawn_points[i].rotation)
+
+	# RaceTracker zurücksetzen
+	if race_tracker:
+		race_tracker.reset_laps()
+
+	# Kamera sofort an Startposition
+	_reset_camera_to_start()
+
+	# Kurze Pause, dann weiter
+	await get_tree().create_timer(0.5).timeout
+
+	# Immunität aufheben und Rennen fortsetzen
+	for vehicle in vehicles:
+		if not vehicle.is_eliminated:
+			vehicle.respawn_immunity = false
+
+	_is_restarting = false
+	print("Rennen neu gestartet!")
+
+## Beendet die aktuelle Runde (Gewinner gefunden)
+func _end_current_round() -> void:
+	_is_restarting = true
+
+	# Gewinner finden
+	var winner_id = -1
+	for vehicle in vehicles:
+		if not vehicle.is_eliminated:
+			winner_id = vehicle.player_id
+			GameManager.add_score(winner_id)
+			break
+
+	GameManager.current_state = GameManager.GameState.ROUND_END
+	GameManager.round_ended.emit(winner_id)
+
+	# Nächste Runde nach kurzer Pause starten
+	await get_tree().create_timer(2.0).timeout
+	_is_restarting = false
+	_start_new_round()
+
+func _reset_camera_to_start() -> void:
+	if vehicles.size() > 0:
+		var first_active: Vehicle = null
+		for v in vehicles:
+			if not v.is_eliminated:
+				first_active = v
+				break
+
+		if first_active:
+			var forward_dir = Vector2.UP.rotated(first_active.rotation)
+			camera.position_smoothing_enabled = false
+			camera.global_position = first_active.global_position + forward_dir * camera.look_ahead
+			camera.position_smoothing_enabled = true
 
 func _on_vehicle_destroyed(player_id: int) -> void:
 	GameManager.eliminate_player(player_id)
-
-func _check_round_end() -> void:
-	if alive_count <= 1:
-		# Gewinner finden
-		var winner_id = -1
-		for vehicle in vehicles:
-			if not vehicle.is_eliminated:
-				winner_id = vehicle.player_id
-				GameManager.add_score(winner_id)
-				break
-
-		GameManager.current_state = GameManager.GameState.ROUND_END
-		GameManager.round_ended.emit(winner_id)
-
-		# Nächste Runde nach kurzer Pause starten
-		await get_tree().create_timer(2.0).timeout
-		_start_new_round()
 
 func _start_new_round() -> void:
 	GameManager.current_round += 1

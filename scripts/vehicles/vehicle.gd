@@ -104,7 +104,9 @@ func destroy() -> void:
 	destroyed.emit()
 
 func lose_life() -> void:
+	var old_lives = lives
 	lives -= 1
+	print("Vehicle.lose_life(): %s - %d -> %d" % [name, old_lives, lives])
 	if lives <= 0:
 		is_eliminated = true
 		destroyed.emit()

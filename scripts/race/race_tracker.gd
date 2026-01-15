@@ -30,9 +30,20 @@ func setup(race_vehicles: Array[Vehicle], path: Path2D) -> void:
 	vehicles = race_vehicles
 	racing_line = path
 
-	if racing_line and racing_line.curve:
-		_curve = racing_line.curve
-		track_length = _curve.get_baked_length()
+	if not racing_line:
+		push_error("RaceTracker: racing_line ist NULL! Track braucht einen RacingLine Path2D Node.")
+		return
+
+	if not racing_line.curve or racing_line.curve.point_count == 0:
+		push_error("RaceTracker: racing_line.curve ist leer! RacingLine braucht racing_points.")
+		return
+
+	_curve = racing_line.curve
+	track_length = _curve.get_baked_length()
+
+	print("RaceTracker Setup: %d Fahrzeuge, Streckenlänge: %.1f, Punkte: %d" % [
+		vehicles.size(), track_length, _curve.point_count
+	])
 
 	# Alle Fahrzeuge initialisieren
 	lap_counts.clear()
@@ -43,6 +54,7 @@ func setup(race_vehicles: Array[Vehicle], path: Path2D) -> void:
 		lap_counts[vehicle] = 0
 		last_offsets[vehicle] = _get_raw_offset(vehicle)
 		last_positions[vehicle] = 0
+		print("  - %s: Start-Offset %.1f" % [vehicle.name, last_offsets[vehicle]])
 
 ## Setzt alle Fahrzeuge auf Runde 0 zurück (für neue Runde)
 func reset_laps() -> void:

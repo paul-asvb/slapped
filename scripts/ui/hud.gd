@@ -94,10 +94,10 @@ func _process(_delta: float) -> void:
 	_update_displays()
 
 func _update_displays() -> void:
-	if not race_tracker:
-		return
-
-	var positions = race_tracker.get_all_positions()
+	# Positions-Daten vom RaceTracker (falls verfügbar)
+	var positions: Dictionary = {}
+	if race_tracker:
+		positions = race_tracker.get_all_positions()
 
 	for i in range(player_panels.size()):
 		var panel = player_panels[i]
@@ -107,22 +107,27 @@ func _update_displays() -> void:
 
 		var vehicle = vehicles_ref[i] if i < vehicles_ref.size() else null
 		if vehicle:
-			# Platzierung + Fortschritt anzeigen (Debug)
-			var place = positions.get(vehicle, i + 1)
-			var progress_percent = race_tracker.get_progress_percent(vehicle) * 100.0
-
-			position_label.text = "Platz: %d (%.1f%%)" % [place, progress_percent]
-			if place == 1:
-				position_label.add_theme_color_override("font_color", Color.GOLD)
-			else:
-				position_label.add_theme_color_override("font_color", Color.WHITE)
-
+			# Leben-Anzeige (unabhängig vom RaceTracker!)
 			lives_label.text = "Leben: %d" % vehicle.lives
 			if vehicle.is_eliminated:
 				lives_label.add_theme_color_override("font_color", Color.RED)
-				position_label.text = "Platz: - (OUT)"
 			else:
 				lives_label.add_theme_color_override("font_color", Color.WHITE)
+
+			# Platzierung (nur wenn RaceTracker verfügbar)
+			if race_tracker and not vehicle.is_eliminated:
+				var place = positions.get(vehicle, i + 1)
+				var progress_percent = race_tracker.get_progress_percent(vehicle) * 100.0
+				position_label.text = "Platz: %d (%.1f%%)" % [place, progress_percent]
+				if place == 1:
+					position_label.add_theme_color_override("font_color", Color.GOLD)
+				else:
+					position_label.add_theme_color_override("font_color", Color.WHITE)
+			elif vehicle.is_eliminated:
+				position_label.text = "Platz: - (OUT)"
+				position_label.add_theme_color_override("font_color", Color.RED)
+			else:
+				position_label.text = "Platz: ?"
 
 		score_label.text = "Punkte: %d" % GameManager.get_score(i)
 

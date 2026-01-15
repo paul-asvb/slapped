@@ -1,10 +1,6 @@
 [gd_scene load_steps=6 format=3 uid="uid://dkn4xp7q2m8rv"]
 
-[sub_resource type="Curve2D" id="racing_line_curve"]
-_data = {
-"points": PackedVector2Array(0, 0, 0, 0, 1050, -625, 0, 0, 0, 0, 0, -625, 0, 0, 0, 0, -1050, -625, 0, 0, 0, 0, -1050, 0, 0, 0, 0, 0, -1050, 625, 0, 0, 0, 0, 0, 625, 0, 0, 0, 0, 1050, 625, 0, 0, 0, 0, 1050, 0)
-}
-point_count = 8
+[ext_resource type="Script" path="res://scripts/tracks/racing_line_setup.gd" id="racing_line_script"]
 
 [sub_resource type="RectangleShape2D" id="shape_outer_long"]
 size = Vector2(2600, 40)
@@ -190,4 +186,5 @@ position = Vector2(1050, -780)
 rotation = -1.5708
 
 [node name="RacingLine" type="Path2D" parent="."]
-curve = SubResource("racing_line_curve")
+script = ExtResource("racing_line_script")
+racing_points = Array[Vector2]([Vector2(1050, -625), Vector2(0, -625), Vector2(-1050, -625), Vector2(-1050, 0), Vector2(-1050, 625), Vector2(0, 625), Vector2(1050, 625), Vector2(1050, 0)])
