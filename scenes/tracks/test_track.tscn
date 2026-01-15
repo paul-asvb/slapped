@@ -1,6 +1,7 @@
-[gd_scene load_steps=8 format=3 uid="uid://dkn4xp7q2m8rv"]
+[gd_scene load_steps=9 format=3 uid="uid://dkn4xp7q2m8rv"]
 
 [ext_resource type="Script" path="res://scripts/tracks/racing_line_setup.gd" id="racing_line_script"]
+[ext_resource type="PackedScene" uid="uid://weapon_pickup001" path="res://scenes/powerups/weapon_pickup.tscn" id="weapon_pickup"]
 
 [sub_resource type="BoxShape3D" id="shape_outer_long"]
 size = Vector3(260, 4, 4)
@@ -152,6 +153,17 @@ size = Vector3(14, 0.5, 16)
 [node name="RampCollision" type="CollisionShape3D" parent="Kickers/Kicker1"]
 transform = Transform3D(1, 0, 0, 0, 0.906, -0.423, 0, 0.423, 0.906, 0, 1.5, 0)
 shape = SubResource("shape_kicker")
+
+[node name="PowerUps" type="Node3D" parent="."]
+
+[node name="WeaponPickup1" parent="PowerUps" instance=ExtResource("weapon_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 0, -62.5)
+
+[node name="WeaponPickup2" parent="PowerUps" instance=ExtResource("weapon_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -105, 0, 0)
+
+[node name="WeaponPickup3" parent="PowerUps" instance=ExtResource("weapon_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 62.5)
 
 [node name="Lighting" type="Node3D" parent="."]
 

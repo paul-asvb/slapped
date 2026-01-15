@@ -44,14 +44,14 @@ func _create_player_panel(idx: int, player_color: Color, vehicle: Vehicle) -> Co
 
 	# Farbiger Rand links
 	var color_bar = ColorRect.new()
-	color_bar.size = Vector2(6, 83)
+	color_bar.size = Vector2(6, 103)
 	color_bar.color = player_color
 	panel.add_child(color_bar)
 
 	# Hintergrund
 	var bg = ColorRect.new()
 	bg.position = Vector2(6, 0)
-	bg.size = Vector2(174, 83)
+	bg.size = Vector2(174, 103)
 	bg.color = Color(0, 0, 0, 0.7)
 	panel.add_child(bg)
 
@@ -87,6 +87,17 @@ func _create_player_panel(idx: int, player_color: Color, vehicle: Vehicle) -> Co
 	score_label.position = Vector2(14, 61)
 	score_label.add_theme_color_override("font_color", Color.WHITE)
 	panel.add_child(score_label)
+
+	# Waffen-Anzeige
+	var weapon_label = Label.new()
+	weapon_label.name = "WeaponLabel"
+	weapon_label.text = "Waffe: -"
+	weapon_label.position = Vector2(14, 79)
+	weapon_label.add_theme_color_override("font_color", Color.ORANGE)
+	panel.add_child(weapon_label)
+
+	# Weapon-Changed Signal verbinden
+	vehicle.weapon_changed.connect(_on_weapon_changed.bind(idx))
 
 	return panel
 
@@ -156,3 +167,37 @@ func _on_player_eliminated(player_id: int) -> void:
 		var panel = player_panels[player_id]
 		var name_label = panel.get_node("NameLabel") as Label
 		name_label.text += " [OUT]"
+
+func _on_weapon_changed(weapon: Weapon, player_idx: int) -> void:
+	if player_idx >= player_panels.size():
+		return
+
+	var panel = player_panels[player_idx]
+	var weapon_label = panel.get_node("WeaponLabel") as Label
+
+	if weapon:
+		weapon_label.text = "Waffe: %s (%d)" % [weapon.get_weapon_name(), weapon.ammo]
+		weapon_label.add_theme_color_override("font_color", Color.ORANGE)
+		# Ammo-Update Signal verbinden
+		weapon.ammo_changed.connect(_on_ammo_changed.bind(player_idx))
+	else:
+		weapon_label.text = "Waffe: -"
+		weapon_label.add_theme_color_override("font_color", Color.GRAY)
+
+func _on_ammo_changed(current: int, max_ammo: int, player_idx: int) -> void:
+	if player_idx >= player_panels.size():
+		return
+
+	var panel = player_panels[player_idx]
+	var weapon_label = panel.get_node("WeaponLabel") as Label
+	var vehicle = vehicles_ref[player_idx] if player_idx < vehicles_ref.size() else null
+
+	if vehicle and vehicle.current_weapon:
+		weapon_label.text = "Waffe: %s (%d)" % [vehicle.current_weapon.get_weapon_name(), current]
+		# Farbe ändern wenn Munition niedrig
+		if current <= 5:
+			weapon_label.add_theme_color_override("font_color", Color.RED)
+		elif current <= 10:
+			weapon_label.add_theme_color_override("font_color", Color.YELLOW)
+		else:
+			weapon_label.add_theme_color_override("font_color", Color.ORANGE)

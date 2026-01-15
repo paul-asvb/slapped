@@ -10,6 +10,7 @@ enum GameState { MENU, PLAYING, PAUSED, ROUND_END }
 
 ## Zentrale Konfiguration - Single Source of Truth
 var config: GameConfig
+var weapon_config: WeaponConfig
 
 var current_state: GameState = GameState.MENU
 var players: Array[Node] = []
@@ -25,6 +26,11 @@ func _load_config() -> void:
 	if not config:
 		push_error("GameManager: game_config.tres nicht gefunden!")
 		config = GameConfig.new()
+
+	weapon_config = load("res://resources/weapon_config.tres") as WeaponConfig
+	if not weapon_config:
+		push_error("GameManager: weapon_config.tres nicht gefunden!")
+		weapon_config = WeaponConfig.new()
 
 func register_player(player: Node) -> int:
 	var player_id = players.size()

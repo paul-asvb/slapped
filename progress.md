@@ -6,65 +6,61 @@
 ## Phase 2: Multiplayer Local ✅
 - Input für 2 Spieler (WASD + Pfeiltasten), Controller-Support vorbereitet
 - Out-of-Bounds System, Rundensystem, HUD
-- **Score-System**: Punkte werden vergeben wenn ein Spieler Out-of-Bounds geht (alle anderen bekommen +1)
+- Score-System: Punkte bei Out-of-Bounds
 
 ## 3D-Umbau ✅
-**Kompletter Umbau von 2D auf 3D für "Wrecked"-Style geneigte Kamera-Perspektive**
+- Doge-Car GLB-Modell mit 4 Rädern
+- Sprung-Physik mit Rampen-Erkennung
+- Zentrale Konfiguration: GameConfig + WeaponConfig
 
-### 3D Auto-Modell ✅
-- **Doge-Car**: GLB-Modell aus Car-Demo Projekt integriert
-- Body: `assets/models/doge/doge-body.glb`
-- 4 Räder: `assets/models/doge/Wheel.glb` (WheelFL, WheelFR, WheelRL, WheelRR)
+## Phase 3: Combat System ✅
 
-### Sprung-Physik ✅
-- Gravitation und vertikale Velocity implementiert
-- Rampen-Erkennung via `get_floor_normal()`
-- Kicker/Rampe auf Teststrecke zum Testen
+### Waffen-System
+- **Base Weapon Klasse** für Erweiterbarkeit
+- **MachineGun**: 30 Schuss, 10/Sek, feuert aus Frontscheinwerfern
+- **Projektile**: 3D leuchtende Kugeln mit Kollision
+- Input: Space (P1), Enter (P2)
 
-### Zentrale Konfiguration ✅
-- **GameConfig Resource** als Single Source of Truth
-- Alle Spielparameter in `resources/game_config.tres`
-- Zugriff über `GameManager.config`
+### Power-Up System
+- **WeaponPickup**: Schwebendes, rotierendes Pickup
+- Verschwindet nach Einsammeln bis zur nächsten Runde
+- 3 Pickups auf Teststrecke platziert
 
-## Konfiguration (game_config.tres)
+### Treffer-Reaktion
+- **Lenkungs-Debuff**: Reduzierte Lenkfähigkeit während Beschuss
+- **Zuck-Effekt**: Auto zuckt links/rechts bei Treffern
+- **Winkel-Begrenzung**: Max 90° Fenster (±45°) für Zucken
+
+## Konfiguration
+
+### weapon_config.tres
 ```
-player_count: 2
-max_rounds: 5
-max_lives: 3
+MachineGun:
+  fire_rate: 10, ammo: 30, speed: 80, spread: 2°
 
-Camera:
-  default_height: 25
-  min_height: 25
-  max_height: 100
-  smooth_speed: 4.0
-  height_smooth_speed: 8.0
+Hit Effects:
+  debuff_duration: 0.5s
+  steering_multiplier: 0.3 (30%)
+  jerk_strength: 0.15 rad
+  jerk_max_angle: 0.785 rad (45°)
+  jerk_randomness: 0.5
 
-Gameplay:
-  out_of_bounds_margin: 15
-
-Vehicle Physics:
-  max_speed: 40
-  acceleration: 60
-  brake_power: 80
-  gravity: 40
+PowerUps:
+  bob, rotation, respawn next round
 ```
 
-## Wichtige Dateien:
+## Wichtige Dateien
 
 | Datei | Beschreibung |
 |-------|--------------|
-| `resources/game_config.tres` | Zentrale Konfiguration (Single Source of Truth) |
-| `scripts/autoload/game_config.gd` | GameConfig Resource-Klasse |
-| `scripts/autoload/game_manager.gd` | Lädt Config, verwaltet Spielzustand |
-| `scripts/game.gd` | Hauptspiellogik, Out-of-Bounds, Score-Vergabe |
-| `scripts/race/race_tracker.gd` | Position-Tracking mit Path3D/Curve3D |
-| `scripts/vehicles/vehicle.gd` | CharacterBody3D, Sprung-Physik |
-| `scripts/vehicles/dynamic_camera.gd` | Wrecked-Style Kamera, dynamischer Zoom |
-| `scripts/ui/hud.gd` | HUD mit Score, Leben, Platzierung |
-| `scenes/vehicles/vehicle.tscn` | Doge-Car mit 4 Rädern |
-| `scenes/tracks/test_track.tscn` | 3D-Strecke mit Kicker |
+| `scripts/weapons/weapon.gd` | Base Weapon Klasse |
+| `scripts/weapons/machine_gun.gd` | MachineGun |
+| `scripts/weapons/projectile.gd` | Projektil |
+| `scripts/powerups/power_up.gd` | Base PowerUp |
+| `scripts/powerups/weapon_pickup.gd` | Waffen-Pickup |
+| `resources/weapon_config.tres` | Waffen-Konfiguration |
 
-## Nächste Phase: 3 - Combat System
-- Power-up Spawner auf der Strecke
-- Waffen-System (Raketen, Boost, Schild, Mine)
-- Treffer-Feedback und Effekte
+## Nächste Schritte
+- Visuelles Feedback (Mündungsfeuer, Treffer-Funken)
+- Sound-Effekte
+- Weitere Waffen (Rakete, Boost, Schild, Mine)

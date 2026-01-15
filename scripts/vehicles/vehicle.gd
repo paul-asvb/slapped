@@ -6,6 +6,7 @@ class_name Vehicle
 signal destroyed()
 signal hit(damage: float)
 signal out_of_bounds(player_id: int)
+signal weapon_changed(weapon: Weapon)
 
 # Leben
 var lives: int = 3
@@ -22,6 +23,14 @@ var ground_y: float = 0.0
 var vertical_velocity: float = 0.0
 var is_airborne: bool = false
 
+# Waffen-System
+var current_weapon: Weapon = null
+
+# Treffer-Reaktion
+var hit_debuff_timer: float = 0.0
+var hit_jerk_accumulator: float = 0.0
+var is_being_hit: bool = false
+
 # Spieler-Zuordnung
 @export var player_id: int = 0
 
@@ -30,6 +39,7 @@ var input_accelerate: String = "accelerate"
 var input_brake: String = "brake"
 var input_left: String = "steer_left"
 var input_right: String = "steer_right"
+var input_shoot: String = "shoot"
 
 # Interner Zustand
 var current_speed: float = 0.0
@@ -46,6 +56,7 @@ func _setup_input_actions() -> void:
 	input_brake = "brake" + suffix
 	input_left = "steer_left" + suffix
 	input_right = "steer_right" + suffix
+	input_shoot = "shoot" + suffix
 
 func _physics_process(delta: float) -> void:
 	_handle_input(delta)
@@ -85,6 +96,8 @@ func _apply_movement(delta: float) -> void:
 	# Rotation um Y-Achse (horizontales Drehen)
 	var turn_amount = steering_input * turn_speed * delta
 	var speed_factor = 1.0 - (abs(current_speed) / GameManager.config.vehicle_max_speed) * 0.3
+	# Lenkungs-Debuff bei Treffern anwenden
+	turn_amount *= get_steering_multiplier()
 	rotation.y -= turn_amount * speed_factor
 
 	# Fahrtrichtung berechnen (vorwärts ist -Z in Godot 3D)
@@ -133,3 +146,87 @@ func reset_to_spawn(spawn_pos: Vector3, spawn_rot: float = 0.0) -> void:
 	rotation.y = spawn_rot
 	velocity = Vector3.ZERO
 	current_speed = 0
+	# Waffe behalten, aber Treffer-Status zurücksetzen
+	hit_debuff_timer = 0.0
+	hit_jerk_accumulator = 0.0
+	is_being_hit = false
+
+func _process(delta: float) -> void:
+	_handle_weapon_input()
+	_update_hit_debuff(delta)
+
+func _handle_weapon_input() -> void:
+	if not current_weapon:
+		return
+
+	if Input.is_action_pressed(input_shoot):
+		if not current_weapon.is_firing:
+			current_weapon.start_firing()
+	else:
+		if current_weapon.is_firing:
+			current_weapon.stop_firing()
+
+func _update_hit_debuff(delta: float) -> void:
+	if hit_debuff_timer > 0:
+		hit_debuff_timer -= delta
+		if hit_debuff_timer <= 0:
+			is_being_hit = false
+			hit_jerk_accumulator = 0.0
+
+# === WAFFEN-SYSTEM ===
+
+func equip_weapon(weapon: Weapon) -> void:
+	if current_weapon:
+		unequip_weapon()
+
+	current_weapon = weapon
+	add_child(weapon)
+	weapon.equip(self)
+	weapon.weapon_empty.connect(_on_weapon_empty)
+	weapon_changed.emit(weapon)
+
+func unequip_weapon() -> void:
+	if not current_weapon:
+		return
+
+	# Erst Feuern stoppen, dann entfernen
+	current_weapon.stop_firing()
+	current_weapon.weapon_empty.disconnect(_on_weapon_empty)
+	current_weapon.unequip()
+	current_weapon.queue_free()
+	current_weapon = null
+	weapon_changed.emit(null)
+
+func _on_weapon_empty() -> void:
+	# Waffe ist leer - entfernen
+	unequip_weapon()
+
+# === TREFFER-REAKTION ===
+
+func on_projectile_hit(attacker: Vehicle) -> void:
+	if respawn_immunity or is_eliminated:
+		return
+
+	var cfg = GameManager.weapon_config
+
+	# Debuff-Timer zurücksetzen
+	hit_debuff_timer = cfg.hit_steering_debuff_duration
+	is_being_hit = true
+
+	# Zuck-Effekt akkumulieren (mit Maximum begrenzen)
+	hit_jerk_accumulator += cfg.hit_jerk_strength
+	hit_jerk_accumulator = minf(hit_jerk_accumulator, cfg.hit_jerk_max_angle)
+
+	# Zufällige Richtung für Zucken (innerhalb des erlaubten Winkels)
+	var jerk_amount = cfg.hit_jerk_strength * (1.0 + randf() * cfg.hit_jerk_randomness)
+	var jerk_dir = 1.0 if randf() > 0.5 else -1.0
+
+	# Rotation zucken lassen
+	rotation.y += jerk_amount * jerk_dir
+
+	hit.emit(1.0)
+
+func get_steering_multiplier() -> float:
+	if is_being_hit:
+		return GameManager.weapon_config.hit_steering_multiplier
+	return 1.0
