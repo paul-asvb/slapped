@@ -14,9 +14,14 @@
 - Zentrale Konfiguration: GameConfig + WeaponConfig
 
 ## Phase 3: Combat System ✅
-- MachineGun: 30 Schuss, 10/Sek
+- MachineGun: 40 Schuss, 20/Sek, Speed 100
 - Power-Up System mit Respawn
-- Treffer-Reaktion: Lenkungs-Debuff + Zuck-Effekt
+
+### Wrecked-Style Wobble-System
+- Treffer baut Wobble-Intensität auf (+15% pro Treffer, max 100%)
+- Auto wackelt hin und her (~10 Hz)
+- Klingt nach 0.5s ohne Treffer ab
+- Lenkungs-Debuff erst ab 5+ Treffern (90% → 50%)
 
 ## Kollisions-System ✅
 - Ramming mit Geschwindigkeits-basiertem Impuls
@@ -36,7 +41,7 @@ Kollision:     collision_restitution, collision_energy_loss
 ### Echtzeit-Metriken
 - speed_kmh, speed_ms, slip_angle, yaw_rate
 - is_drifting, effective_grip, steering_actual
-- forward_speed, lateral_speed, last_collision_impulse
+- hit_count, wobble_intensity
 
 ### Debug-Overlay
 - Toggle mit F3
@@ -52,7 +57,7 @@ Kollision:     collision_restitution, collision_energy_loss
 
 ### Regelsystem
 - Max ±5% Anpassung pro Iteration
-- Bis zu 50 Iterationen
+- Bis zu 10 Iterationen
 - Speichert finale Config als .tres
 
 ### Autotune-Szene
