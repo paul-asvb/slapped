@@ -100,3 +100,8 @@ Slipstream:    slipstream_range, slipstream_angle, slipstream_max_drag_reduction
 - Visuelles Feedback (Mündungsfeuer, Treffer-Funken, Slipstream-Effekt)
 - Sound-Effekte
 - Weitere Waffen (Rakete, Boost, Schild, Mine)
+
+## DevOps / Infrastructure
+- Linux & Web Build Automation mit `just` (justfile)
+- Docker-basierte Builds für Linux und HTML5
+- Lokaler Web-Server via Docker (`just serve-web`)
