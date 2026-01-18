@@ -4,32 +4,20 @@
 
 [resource]
 script = ExtResource("1_config")
-
-# === ANTRIEB ===
 engine_force = 150.0
 drag_coefficient = 0.02
 max_speed = 45.0
-
-# === LENKUNG ===
 steer_gain_low_speed = 5.0
 steer_gain_high_speed = 2.0
 steer_response_time = 0.08
-
-# === GRIP/DRIFT ===
 grip_base = 0.95
 grip_breakpoint_slip = 15.0
 slide_friction = 0.6
 drift_recovery_strength = 3.0
-
-# === YAW-KONTROLLE ===
 yaw_damping = 2.0
 spin_threshold = 180.0
-
-# === KOLLISION ===
 collision_restitution = 0.4
 collision_energy_loss = 0.3
-
-# === SLIPSTREAM ===
 slipstream_range = 50.0
 slipstream_angle = 30.0
 slipstream_max_drag_reduction = 0.8
