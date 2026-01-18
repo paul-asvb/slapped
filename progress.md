@@ -16,6 +16,15 @@
 ## Phase 3: Combat System ✅
 - MachineGun: 40 Schuss, 20/Sek, Speed 100
 - Power-Up System mit Respawn
+- RayGun: Strahl-Waffe mit Launch-Effekt
+
+### RayGun Waffe
+- Burst-Strahl: 0.3 Sek, 1 Schuss
+- 87.5m Reichweite, 0.5m Radius (Multi-Hit möglich)
+- ShapeCast3D trifft alle Fahrzeuge im Strahl-Pfad
+- Treffer-Effekt: Kickflip mit 360° Rotation basierend auf Trefferrichtung
+- Launch: Force 12, ~1.2 Sek Luftzeit
+- Launch-Immunity nach Landung (2.5 Sek)
 
 ### Wrecked-Style Wobble-System
 - Treffer baut Wobble-Intensität auf (+15% pro Treffer, max 100%)
@@ -29,19 +38,29 @@
 
 ## Parametrische Fahrphysik ✅
 
-### VehiclePhysicsConfig (14 Parameter)
+### VehiclePhysicsConfig (19 Parameter)
 ```
 Antrieb:       engine_force, drag_coefficient, max_speed
 Lenkung:       steer_gain_low_speed, steer_gain_high_speed, steer_response_time
 Grip/Drift:    grip_base, grip_breakpoint_slip, slide_friction, drift_recovery_strength
 Yaw-Kontrolle: yaw_damping, spin_threshold
 Kollision:     collision_restitution, collision_energy_loss
+Slipstream:    slipstream_range, slipstream_angle, slipstream_max_drag_reduction, slipstream_falloff, slipstream_min_speed
 ```
+
+### Slipstream-System ✅
+- Hinter Fahrzeug fahren gibt Geschwindigkeitsboost
+- Reichweite: 50 Einheiten, ±30° Winkel
+- Exponentieller Falloff: näher = stärker
+- Bis zu 80% Drag-Reduktion + 30% extra Antriebskraft
+- Nur aktiv ab 5 m/s, beide müssen gleiche Richtung fahren
+- Debug-Metriken: is_in_slipstream, slipstream_intensity (F3)
 
 ### Echtzeit-Metriken
 - speed_kmh, speed_ms, slip_angle, yaw_rate
 - is_drifting, effective_grip, steering_actual
 - hit_count, wobble_intensity
+- is_in_slipstream, slipstream_intensity
 
 ### Debug-Overlay
 - Toggle mit F3
@@ -70,14 +89,14 @@ Kollision:     collision_restitution, collision_energy_loss
 |-------|--------------|
 | `scripts/autoload/vehicle_physics_config.gd` | 14-Parameter Resource |
 | `resources/vehicle_physics.tres` | Standard-Konfiguration |
-| `scripts/vehicles/vehicle.gd` | Parametrische Physik + Metriken |
+| `scripts/vehicles/vehicle.gd` | Parametrische Physik + Metriken + Launch-System |
+| `scripts/weapons/ray_gun.gd` | RayGun Strahl-Waffe |
 | `scripts/autotune/autotune_runner.gd` | Autotune Controller |
 | `scripts/autotune/autotune_rules.gd` | Regelbasierte Anpassung |
 | `scripts/autotune/tests/*.gd` | 4 Test-Klassen |
 | `scripts/ui/hud.gd` | HUD + Debug-Overlay |
 
 ## Nächste Schritte
-- Autotune testen und Zielwerte feinjustieren
-- Visuelles Feedback (Mündungsfeuer, Treffer-Funken)
+- Visuelles Feedback (Mündungsfeuer, Treffer-Funken, Slipstream-Effekt)
 - Sound-Effekte
 - Weitere Waffen (Rakete, Boost, Schild, Mine)

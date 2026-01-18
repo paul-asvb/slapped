@@ -32,6 +32,14 @@ class_name VehiclePhysicsConfig
 @export var collision_restitution: float = 0.4   ## Bounce-Faktor (0 = kein Bounce, 1 = voller Bounce)
 @export var collision_energy_loss: float = 0.3   ## Geschwindigkeitsverlust bei Crash (0-1)
 
+# === SLIPSTREAM (5 Parameter) ===
+@export_group("Slipstream")
+@export var slipstream_range: float = 50.0              ## Max Reichweite
+@export var slipstream_angle: float = 20.0              ## Halber Winkel (Grad)
+@export var slipstream_max_drag_reduction: float = 0.5  ## 50% weniger Drag
+@export var slipstream_falloff: float = 1.5             ## Exponentieller Falloff
+@export var slipstream_min_speed: float = 15.0          ## Min Geschwindigkeit für Effekt
+
 
 ## Berechnet die interpolierte Lenkstärke basierend auf Geschwindigkeit
 func get_steer_gain(speed_ratio: float) -> float:

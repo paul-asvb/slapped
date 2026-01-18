@@ -28,3 +28,10 @@ spin_threshold = 180.0
 # === KOLLISION ===
 collision_restitution = 0.4
 collision_energy_loss = 0.3
+
+# === SLIPSTREAM ===
+slipstream_range = 50.0
+slipstream_angle = 30.0
+slipstream_max_drag_reduction = 0.8
+slipstream_falloff = 1.0
+slipstream_min_speed = 5.0

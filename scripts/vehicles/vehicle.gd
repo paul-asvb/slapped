@@ -31,6 +31,23 @@ var is_steering_impaired: bool = false    # Lenkungs-Debuff aktiv (ab 5+ Treffer
 var collision_grip_debuff_timer: float = 0.0
 var is_collision_stunned: bool = false
 
+# Launch-System (Raygun-Effekt)
+var is_launched: bool = false
+var launch_timer: float = 0.0
+var launch_immunity_timer: float = 0.0
+
+# Self-Righting (nach Landung auf dem Kopf)
+var is_self_righting: bool = false
+var self_righting_timer: float = 0.0
+var self_righting_start_rot: Vector3 = Vector3.ZERO
+var self_righting_target_y_rot: float = 0.0
+const SELF_RIGHTING_DURATION: float = 0.8  # Sekunden zum Aufrichten
+
+# Slipstream-System
+var slipstream_target: Vehicle = null
+var slipstream_intensity: float = 0.0  # 0.0 - 1.0
+var is_in_slipstream: bool = false
+
 # Spieler-Zuordnung
 @export var player_id: int = 0
 
@@ -68,7 +85,10 @@ var metrics: Dictionary = {
 	"forward_speed": 0.0,
 	"lateral_speed": 0.0,
 	"hit_count": 0,
-	"wobble_intensity": 0.0
+	"wobble_intensity": 0.0,
+	"is_launched": false,
+	"is_in_slipstream": false,
+	"slipstream_intensity": 0.0
 }
 
 
@@ -107,11 +127,18 @@ func _physics_process(delta: float) -> void:
 	_handle_input(delta)
 	_apply_forces(delta)
 	_keep_upright(delta)
+	_update_self_righting(delta)
 
 
 func _handle_input(_delta: float) -> void:
 	# Bei deaktiviertem Input (Autotune) nicht überschreiben
 	if input_disabled:
+		return
+
+	# Keine Kontrolle während Launch oder Self-Righting
+	if is_launched or is_self_righting:
+		throttle_input = 0.0
+		steering_input = 0.0
 		return
 
 	if is_bot:
@@ -233,6 +260,17 @@ func _apply_forces(delta: float) -> void:
 	var drag = -linear_velocity * speed * cfg.drag_coefficient
 	apply_central_force(drag * mass)
 
+	# === SLIPSTREAM BOOST ===
+	if slipstream_intensity > 0.01:
+		# 1. Drag-Reduktion
+		var drag_reduction = cfg.slipstream_max_drag_reduction * slipstream_intensity
+		var counter_drag = linear_velocity * speed * cfg.drag_coefficient * drag_reduction
+		apply_central_force(counter_drag * mass)
+
+		# 2. Direkter Vorwärts-Boost (spürbarerer Effekt)
+		var boost_force = forward * cfg.engine_force * 0.3 * slipstream_intensity
+		apply_central_force(boost_force)
+
 	# === LENKUNG (interpoliert mit Response-Time) ===
 	var speed_ratio = clampf(speed / cfg.max_speed, 0.0, 1.0)
 	var steer_gain = cfg.get_steer_gain(speed_ratio)
@@ -294,6 +332,10 @@ func _apply_forces(delta: float) -> void:
 
 
 func _keep_upright(_delta: float) -> void:
+	# Während Launch oder Self-Righting: Nicht eingreifen
+	if is_launched or is_self_righting:
+		return
+
 	# Halte das Fahrzeug flach auf dem Boden
 	rotation.x = lerpf(rotation.x, 0, 0.3)
 	rotation.z = lerpf(rotation.z, 0, 0.3)
@@ -336,6 +378,19 @@ func reset_to_spawn(spawn_pos: Vector3, spawn_rot: float = 0.0) -> void:
 	# Kollisions-Debuff zurücksetzen
 	collision_grip_debuff_timer = 0.0
 	is_collision_stunned = false
+	# Launch-System zurücksetzen
+	is_launched = false
+	launch_timer = 0.0
+	launch_immunity_timer = 0.0
+	# Self-Righting zurücksetzen
+	is_self_righting = false
+	self_righting_timer = 0.0
+	self_righting_start_rot = Vector3.ZERO
+	self_righting_target_y_rot = 0.0
+	# Slipstream zurücksetzen
+	slipstream_target = null
+	slipstream_intensity = 0.0
+	is_in_slipstream = false
 	# Metriken zurücksetzen
 	for key in metrics.keys():
 		if metrics[key] is float:
@@ -344,10 +399,208 @@ func reset_to_spawn(spawn_pos: Vector3, spawn_rot: float = 0.0) -> void:
 			metrics[key] = false
 
 
+# === LAUNCH-SYSTEM (Raygun-Effekt) ===
+
+func launch_into_air(force: float = 18.0, duration: float = 2.5, hit_direction: Vector3 = Vector3.ZERO) -> void:
+	if is_launched or is_eliminated or launch_immunity_timer > 0:
+		return
+
+	is_launched = true
+	launch_timer = duration
+
+	# Aufwärts-Impuls
+	apply_central_impulse(Vector3(0, force, 0))
+
+	# Barrel Roll: Rotation um die Längsachse (Z-Achse) - Auto rollt seitlich aufs Dach
+	var local_forward = -transform.basis.z
+
+	# Bestimme Roll-Richtung basierend auf Trefferwinkel (von welcher Seite getroffen)
+	var roll_direction = 1.0
+	if hit_direction != Vector3.ZERO:
+		var local_right = transform.basis.x
+		var side_dot = hit_direction.normalized().dot(local_right)
+		roll_direction = sign(side_dot) if abs(side_dot) > 0.2 else 1.0
+
+	# Halbe Drehung (180° = PI) damit Auto auf dem Dach landet
+	var roll_speed = PI / 1.0 * roll_direction
+
+	# Setze Angular Velocity für Barrel Roll um Z-Achse
+	angular_velocity = local_forward * roll_speed
+
+	# Leichter Rückstoß in Trefferrichtung
+	if hit_direction != Vector3.ZERO:
+		var knockback = -hit_direction.normalized() * force * 0.3
+		knockback.y = 0
+		apply_central_impulse(knockback)
+
+
+func _update_launch_state(delta: float) -> void:
+	# Immunity Timer
+	if launch_immunity_timer > 0:
+		launch_immunity_timer -= delta
+
+	# Automatisches Aufrichten wenn auf dem Kopf und nicht im Launch
+	if not is_launched and not is_self_righting and _is_upside_down() and _is_nearly_stationary():
+		_start_self_righting()
+
+	if not is_launched:
+		metrics.is_launched = false
+		return
+
+	launch_timer -= delta
+	metrics.is_launched = true
+
+	# Wenn Timer abgelaufen und auf dem Boden (Y-Geschwindigkeit nahe 0 und Position niedrig)
+	if launch_timer <= 0 and _is_on_ground():
+		is_launched = false
+		launch_immunity_timer = 2.5  # Cooldown nach Landung
+
+
+func _is_on_ground() -> bool:
+	# Prüfe ob Fahrzeug auf dem Boden ist (Y-Position und Geschwindigkeit)
+	# Höherer Schwellwert für umgedrehte Autos
+	return global_position.y < 3.0 and absf(linear_velocity.y) < 3.0
+
+
+func _is_nearly_stationary() -> bool:
+	# Prüfe ob Fahrzeug fast stillsteht
+	return linear_velocity.length() < 5.0 and angular_velocity.length() < 2.0
+
+
+func _is_upside_down() -> bool:
+	# Fahrzeug ist auf dem Kopf wenn lokale Y-Achse nach unten zeigt
+	var up = transform.basis.y
+	return up.dot(Vector3.UP) < 0.3  # Weniger als ~70° von aufrecht
+
+
+func _start_self_righting() -> void:
+	is_self_righting = true
+	self_righting_timer = 0.0
+	# Speichere Start-Rotation und Ziel-Y-Rotation
+	self_righting_start_rot = rotation
+	self_righting_target_y_rot = rotation.y
+	# Stoppe alle Bewegung
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	# Hebe Auto leicht an
+	global_position.y += 1.5
+
+
+func _update_self_righting(delta: float) -> void:
+	if not is_self_righting:
+		return
+
+	self_righting_timer += delta
+	var t = clampf(self_righting_timer / SELF_RIGHTING_DURATION, 0.0, 1.0)
+
+	# Smooth easing (ease-in-out)
+	var eased_t = t * t * (3.0 - 2.0 * t)
+
+	# Interpoliere Rotation zu aufrecht (X und Z zu 0, Y bleibt)
+	rotation.x = lerpf(self_righting_start_rot.x, 0.0, eased_t)
+	rotation.z = lerpf(self_righting_start_rot.z, 0.0, eased_t)
+	rotation.y = self_righting_target_y_rot
+
+	# Halte Position stabil während Rotation
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+
+	# Fertig
+	if t >= 1.0:
+		is_self_righting = false
+		rotation = Vector3(0, self_righting_target_y_rot, 0)
+
+
+# === SLIPSTREAM-SYSTEM ===
+
+func _find_slipstream_target() -> Vehicle:
+	var cfg = physics_config
+	var my_speed = linear_velocity.length()
+
+	# Nur bei ausreichender Geschwindigkeit
+	if my_speed < cfg.slipstream_min_speed:
+		return null
+
+	var forward = -transform.basis.z
+	forward.y = 0
+	forward = forward.normalized()
+
+	var best_target: Vehicle = null
+	var best_score: float = 0.0
+
+	for vehicle in get_tree().get_nodes_in_group("vehicles"):
+		if vehicle == self or not is_instance_valid(vehicle):
+			continue
+
+		# Vektor zum anderen Fahrzeug
+		var to_vehicle = vehicle.global_position - global_position
+		to_vehicle.y = 0
+		var distance = to_vehicle.length()
+
+		# Range-Check
+		if distance > cfg.slipstream_range or distance < 3.0:
+			continue
+
+		# Winkel-Check (muss vor mir sein)
+		var dir_to_vehicle = to_vehicle.normalized()
+		var angle = rad_to_deg(acos(clampf(forward.dot(dir_to_vehicle), -1.0, 1.0)))
+		if angle > cfg.slipstream_angle:
+			continue
+
+		# Richtungs-Check (Fahrzeug muss ähnliche Richtung fahren)
+		var other_forward = -vehicle.transform.basis.z
+		other_forward.y = 0
+		other_forward = other_forward.normalized()
+		var direction_alignment = forward.dot(other_forward)
+		if direction_alignment < 0.5:  # Mindestens ~60° gleiche Richtung
+			continue
+
+		# Score: Je näher und besser ausgerichtet, desto besser
+		var score = (1.0 - distance / cfg.slipstream_range) * direction_alignment
+		if score > best_score:
+			best_score = score
+			best_target = vehicle
+
+	return best_target
+
+
+func _calculate_slipstream_intensity(target: Vehicle) -> float:
+	if not target:
+		return 0.0
+
+	var cfg = physics_config
+	var to_target = target.global_position - global_position
+	to_target.y = 0
+	var distance = to_target.length()
+
+	# Exponentieller Falloff: näher = stärker
+	var normalized_dist = distance / cfg.slipstream_range
+	var intensity = pow(1.0 - normalized_dist, cfg.slipstream_falloff)
+
+	return clampf(intensity, 0.0, 1.0)
+
+
+func _update_slipstream(delta: float) -> void:
+	var new_target = _find_slipstream_target()
+	slipstream_target = new_target
+
+	var target_intensity = _calculate_slipstream_intensity(new_target)
+
+	# Smooth transition
+	slipstream_intensity = lerpf(slipstream_intensity, target_intensity, delta * 3.0)
+	is_in_slipstream = slipstream_intensity > 0.05
+
+	# Metriken
+	metrics["is_in_slipstream"] = is_in_slipstream
+	metrics["slipstream_intensity"] = slipstream_intensity
+
+
 func _process(delta: float) -> void:
 	_handle_weapon_input()
 	_update_hit_wobble(delta)
 	_update_collision_debuff(delta)
+	_update_launch_state(delta)
+	_update_slipstream(delta)
 
 
 func _handle_weapon_input() -> void:

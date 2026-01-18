@@ -23,6 +23,16 @@ class_name WeaponConfig
 @export var projectile_lifetime: float = 3.0  # Max Lebenszeit in Sekunden
 @export var projectile_color: Color = Color(1.0, 0.9, 0.3)  # Gelb-Orange
 
+# === RAY GUN ===
+@export_group("Ray Gun")
+@export var raygun_ammo: int = 3               # Anzahl Schüsse
+@export var raygun_burst_duration: float = 0.3 # Sekunden pro Schuss
+@export var raygun_range: float = 35.0         # Reichweite in Metern
+@export var raygun_beam_radius: float = 0.5    # Strahl-Radius für Multi-Hit
+@export var raygun_launch_force: float = 60.0  # Aufwärts-Impuls
+@export var raygun_launch_duration: float = 2.5 # Sekunden in der Luft
+@export var raygun_beam_color: Color = Color(0.2, 0.8, 1.0)  # Cyan
+
 # === POWER-UPS ===
 @export_group("Power-Ups")
 @export var pickup_respawn_next_round: bool = true  # Respawnt erst nächste Runde

@@ -223,7 +223,7 @@ func _create_debug_panel() -> void:
 	# Position: Unten links
 	debug_panel.anchors_preset = Control.PRESET_BOTTOM_LEFT
 	debug_panel.offset_left = 10
-	debug_panel.offset_top = -200
+	debug_panel.offset_top = -220
 	debug_panel.offset_right = 260
 	debug_panel.offset_bottom = -10
 
@@ -254,7 +254,8 @@ func _create_debug_panel() -> void:
 		"Grip",
 		"Steering",
 		"HitCount",
-		"Wobble"
+		"Wobble",
+		"Slipstream"
 	]
 
 	for label_name in labels:
@@ -308,6 +309,11 @@ func _update_debug_panel() -> void:
 	debug_labels["HitCount"].text = "Hits: %d %s" % [m.hit_count, "(IMPAIRED)" if v.is_steering_impaired else ""]
 	debug_labels["HitCount"].add_theme_color_override("font_color", hit_color)
 	debug_labels["Wobble"].text = "Wobble: %.0f%%" % (m.wobble_intensity * 100)
+
+	# Slipstream Anzeige
+	var slip_color = Color.CYAN if m.is_in_slipstream else Color.WHITE
+	debug_labels["Slipstream"].text = "Slipstream: %.0f%%" % (m.slipstream_intensity * 100)
+	debug_labels["Slipstream"].add_theme_color_override("font_color", slip_color)
 
 
 func set_debug_target(vehicle: Vehicle) -> void:

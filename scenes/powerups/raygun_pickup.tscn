@@ -1,0 +1,28 @@
+[gd_scene load_steps=5 format=3 uid="uid://raygun_pickup001"]
+
+[ext_resource type="Script" path="res://scripts/powerups/weapon_pickup.gd" id="1_script"]
+
+[sub_resource type="BoxShape3D" id="pickup_shape"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxMesh" id="pickup_mesh"]
+size = Vector3(1.5, 1.5, 1.5)
+
+[sub_resource type="StandardMaterial3D" id="pickup_material"]
+albedo_color = Color(1, 0.2, 0.2, 1)
+emission_enabled = true
+emission = Color(1, 0.3, 0.3, 1)
+emission_energy_multiplier = 2.0
+
+[node name="RaygunPickup" type="Area3D"]
+collision_layer = 8
+collision_mask = 1
+script = ExtResource("1_script")
+weapon_type = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("pickup_shape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("pickup_mesh")
+material_override = SubResource("pickup_material")
